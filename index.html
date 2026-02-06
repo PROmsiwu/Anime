@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STORM | KINGDOM 👑</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Amiri:ital@1&family=New+Rocker&display=swap" rel="stylesheet">
+    <style>
+        :root { --main-color: #ff0055; --glow: #00f2ff; }
+        body { font-family: 'Cairo', sans-serif; background: #020205; color: white; overflow-x: hidden; margin:0; }
+        .stars-bg { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at center, #0a0a2e 0%, #000 100%); }
+        .star { position: absolute; background: white; border-radius: 50%; opacity: 0.5; animation: blink var(--d) infinite; }
+        @keyframes blink { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+        #royal-scroll { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; perspective: 1000px; }
+        .scroll-paper { background: #f7e7ce; color: #3a1c02; padding: 50px; border-radius: 5px; box-shadow: 0 0 100px rgba(255, 0, 85, 0.2); font-family: 'Amiri', serif; transform: rotateX(20deg); animation: openScroll 1.5s forwards ease-in-out; border-left: 15px solid #4a2508; border-right: 15px solid #4a2508; max-width: 90%; text-align: center; }
+        @keyframes openScroll { from { transform: scaleY(0) rotateX(20deg); } to { transform: scaleY(1) rotateX(0deg); } }
+        .itadori-aura { border: 4px solid #ff0055; box-shadow: 0 0 20px #ff0055, inset 0 0 15px #ff0055; animation: sukuna-glow 1.5s infinite alternate; background: linear-gradient(45deg, #000, #4a0011); position: relative; }
+        .itadori-aura::before { content: "👹"; position: absolute; top: -15px; right: -10px; font-size: 20px; }
+        @keyframes sukuna-glow { 0% { filter: drop-shadow(0 0 5px #ff0055) hue-rotate(0deg); } 100% { filter: drop-shadow(0 0 25px #00f2ff) hue-rotate(360deg); } }
+        .rank-Admin { border: 3px solid #facc15; box-shadow: 0 0 15px #facc15; }
+        .rank-Member { border: 2px solid #3b82f6; }
+        .hidden { display: none !important; }
+        .glass-anime { background: rgba(10, 10, 20, 0.8); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 2rem; }
+    </style>
+</head>
+<body>
+    <div class="stars-bg" id="stars-container"></div>
+    <div id="royal-scroll">
+        <div class="scroll-paper">
+            <h1 class="text-5xl font-black mb-6" style="font-family: 'New Rocker', cursive;">STORM | KINGDOM</h1>
+            <p class="text-2xl mb-4 italic">"القوة ليست في العضلات، بل في الإرادة التي تسكن الروح"</p>
+            <p class="text-xl mb-8">نرحب بك في عرش الأساطير...</p>
+            <button onclick="closeScroll()" class="bg-[#4a2508] text-[#f7e7ce] px-10 py-3 rounded-full text-xl font-bold hover:scale-110 transition">ادخل الآن</button>
+        </div>
+    </div>
+
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center p-6 hidden">
+        <div class="glass-anime p-10 w-full max-w-md text-center shadow-2xl">
+            <h2 class="text-3xl font-black text-red-500 mb-6">تسجيل المحاربين</h2>
+            <input type="text" id="nick" placeholder="اللقب الملكي (مثل: itadori)" class="w-full p-4 bg-zinc-900/50 rounded-2xl mb-4 border border-zinc-800 text-center outline-none focus:border-red-500">
+            <input type="text" id="phone" placeholder="رقم الهاتف" class="w-full p-4 bg-zinc-900/50 rounded-2xl mb-4 border border-zinc-800 text-center outline-none focus:border-red-500">
+            <input type="file" id="pic" class="text-xs mb-6 text-zinc-500">
+            <button id="join-btn" class="w-full bg-gradient-to-r from-red-600 to-purple-600 py-4 rounded-2xl font-black shadow-lg">طلب انضمام</button>
+        </div>
+    </div>
+
+    <div id="kingdom-ui" class="hidden">
+        <nav class="p-6 glass-anime m-4 flex justify-between items-center border-b-2 border-red-500/50">
+            <div class="flex items-center gap-4">
+                <img id="my-p" class="w-16 h-16 rounded-full object-cover">
+                <div><p id="my-n" class="font-black text-lg"></p><p id="my-r" class="text-[10px] text-red-400"></p></div>
+            </div>
+            <h1 class="text-xl font-black text-red-500 font-[New Rocker]">STORM KINGDOM</h1>
+        </nav>
+        <main class="max-w-4xl mx-auto p-6">
+            <div id="posts" class="space-y-8 mb-16"></div>
+            <h3 class="text-2xl font-black mb-6">⚔️ سادة المملكة</h3>
+            <div id="members" class="grid grid-cols-3 sm:grid-cols-5 gap-6"></div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
+        const firebaseConfig = { databaseURL: "https://project-fe025bb5-b1cc-4b8f-93e-default-rtdb.firebaseio.com" };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const DB_PATH = "KINGDOM_FINAL_STORM_REBORN/"; // مسار منفصل تماماً
+
+        for(let i=0; i<200; i++) {
+            const s = document.createElement('div'); s.className = 'star';
+            s.style.cssText = `left:${Math.random()*100}%; top:${Math.random()*100}%; width:2px; height:2px; --d:${Math.random()*5+2}s`;
+            document.getElementById('stars-container').appendChild(s);
+        }
+
+        window.closeScroll = () => { document.getElementById('royal-scroll').style.display='none'; checkAccess(); };
+
+        let myImg = "";
+        document.getElementById('pic').onchange = (e) => {
+            const r = new FileReader(); r.onload=()=>myImg=r.result; r.readAsDataURL(e.target.files[0]);
+        };
+
+        document.getElementById('join-btn').onclick = async () => {
+            const nick = document.getElementById('nick').value, phone = document.getElementById('phone').value;
+            if(!nick || !phone || !myImg) return alert("اكمل البيانات!");
+            const isItadori = (phone === "+201005718820" && nick === "itadori");
+            const user = { nick, phone, pic: myImg, status: isItadori?'approved':'pending', rank: isItadori?'KING':'Member' };
+            localStorage.setItem('k_storm_p', phone);
+            await set(ref(db, DB_PATH + 'users/' + phone), user);
+            location.reload();
+        };
+
+        function checkAccess() {
+            const ph = localStorage.getItem('k_storm_p');
+            if(!ph) return document.getElementById('auth-screen').classList.remove('hidden');
+            onValue(ref(db, DB_PATH + 'users/' + ph), (s) => {
+                const u = s.val();
+                if(!u) return document.getElementById('auth-screen').classList.remove('hidden');
+                if(u.status === 'approved') startKingdom(u);
+                else alert("الملك يراجع طلبك...");
+            });
+        }
+
+        function startKingdom(me) {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('kingdom-ui').classList.remove('hidden');
+            document.getElementById('my-n').innerText = me.nick; document.getElementById('my-r').innerText = me.rank; document.getElementById('my-p').src = me.pic;
+            if(me.phone === "+201005718820") document.getElementById('my-p').classList.add('itadori-aura');
+            else document.getElementById('my-p').classList.add('rank-' + me.rank);
+
+            onValue(ref(db, DB_PATH + 'users'), snap => {
+                const box = document.getElementById('members'); box.innerHTML = "";
+                snap.forEach(c => {
+                    const u = c.val();
+                    if(u.status === 'approved') {
+                        let style = (u.phone === "+201005718820") ? 'itadori-aura' : 'rank-'+u.rank;
+                        box.innerHTML += `<div class="text-center"><img src="${u.pic}" class="w-16 h-16 rounded-full object-cover mx-auto ${style}"><p class="text-[10px] mt-2 font-bold">${u.nick}</p></div>`;
+                    }
+                });
+            });
+
+            onValue(ref(db, DB_PATH + 'posts'), snap => {
+                const box = document.getElementById('posts'); box.innerHTML = "";
+                snap.forEach(c => {
+                    const p = c.val();
+                    box.innerHTML += `<div class="glass-anime p-8 border-l-8 border-red-600">
+                        <p class="text-red-500 font-black mb-2 text-xs">🏯 مَرْسُومٌ مَلَكِيّ :</p>
+                        <p class="text-xl">${p.text}</p>
+                        ${p.img ? `<img src="${p.img}" class="mt-4 rounded-2xl w-full">` : ''}
+                    </div>`;
+                });
+            });
+        }
+    </script>
+</body>
+</html>
